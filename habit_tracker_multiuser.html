@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Habit Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0e0e10;
+      --surface: #18181c;
+      --surface2: #222228;
+      --border: #2e2e38;
+      --accent: #c8f55a;
+      --accent2: #5af5c8;
+      --accent3: #f55a8c;
+      --text: #f0f0ee;
+      --muted: #6b6b7a;
+      --font-display: 'DM Serif Display', serif;
+      --font-mono: 'DM Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      padding: 2rem 1rem 5rem;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+    .wrapper { max-width: 680px; margin: 0 auto; position: relative; z-index: 1; }
+
+    /* ══ LOGIN OVERLAY ══ */
+    #loginScreen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 999;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+    #loginScreen::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .login-box {
+      width: min(440px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.4rem;
+      position: relative;
+      animation: loginIn .4s ease both;
+    }
+    @keyframes loginIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+    .login-logo {
+      font-family: var(--font-display);
+      font-size: 2rem; line-height: 1;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.3rem;
+    }
+    .login-logo em { font-style: italic; color: var(--accent); }
+    .login-sub {
+      font-family: var(--font-mono);
+      font-size: 0.65rem; color: var(--muted);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex; gap: 0.35rem; margin-bottom: 1.8rem;
+    }
+    .step-dot {
+      height: 3px; border-radius: 99px; flex: 1;
+      background: var(--border); transition: background 0.3s;
+    }
+    .step-dot.active { background: var(--accent); }
+    .step-dot.done   { background: var(--accent2); }
+
+    /* Step panels */
+    .step-panel { display: none; }
+    .step-panel.active { display: block; }
+
+    .step-title {
+      font-family: var(--font-mono);
+      font-size: 0.62rem; color: var(--muted);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+    .step-heading {
+      font-family: var(--font-display);
+      font-size: 1.4rem; margin-bottom: 0.4rem; line-height: 1.2;
+    }
+    .step-desc {
+      font-size: 0.78rem; color: var(--muted);
+      line-height: 1.6; margin-bottom: 1.4rem;
+    }
+    .step-desc a { color: var(--accent); text-decoration: none; }
+    .step-desc code { font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent2); }
+
+    .flabel {
+      font-family: var(--font-mono); font-size: 0.62rem;
+      color: var(--muted); letter-spacing: 0.08em;
+      text-transform: uppercase; display: block; margin-bottom: 0.3rem;
+    }
+    .finput {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-family: var(--font-mono);
+      font-size: 0.78rem; padding: 0.65rem 0.9rem;
+      outline: none; margin-bottom: 0.85rem; transition: border 0.2s;
+    }
+    .finput:focus { border-color: var(--accent); }
+    .finput.err   { border-color: var(--accent3); }
+
+    .btn-primary {
+      width: 100%; background: var(--accent); color: #0e0e10;
+      border: none; border-radius: 10px;
+      font-family: var(--font-mono); font-size: 0.82rem; font-weight: 500;
+      padding: 0.78rem; cursor: pointer; transition: opacity 0.2s;
+      margin-top: 0.2rem;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-ghost {
+      width: 100%; background: transparent;
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--muted); font-family: var(--font-mono);
+      font-size: 0.78rem; padding: 0.68rem;
+      cursor: pointer; transition: all 0.2s; margin-top: 0.5rem;
+    }
+    .btn-ghost:hover { border-color: var(--muted); color: var(--text); }
+
+    .login-error {
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--accent3); background: rgba(245,90,140,.08);
+      border: 1px solid rgba(245,90,140,.25); border-radius: 8px;
+      padding: 0.6rem 0.85rem; margin-bottom: 0.85rem;
+      display: none;
+    }
+    .login-error.show { display: block; }
+
+    .login-ok {
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--accent2); background: rgba(90,245,200,.08);
+      border: 1px solid rgba(90,245,200,.25); border-radius: 8px;
+      padding: 0.6rem 0.85rem; margin-bottom: 0.85rem;
+      display: none;
+    }
+    .login-ok.show { display: block; }
+
+    .loading-spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(14,14,16,0.3);
+      border-top-color: #0e0e10;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      margin-right: 0.4rem; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Welcome banner */
+    .welcome-banner {
+      display: flex; align-items: center; gap: 0.65rem;
+      background: rgba(200,245,90,.06);
+      border: 1px solid rgba(200,245,90,.2);
+      border-radius: 10px; padding: 0.75rem 1rem;
+      margin-bottom: 1.4rem;
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--accent); animation: up .3s ease;
+    }
+    .welcome-banner strong { font-weight: 500; }
+
+    /* User badge in header */
+    .user-badge {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      background: var(--surface2); border: 1px solid rgba(200,245,90,.3);
+      color: var(--accent); font-family: var(--font-mono); font-size: 0.7rem;
+      padding: 0.45rem 0.8rem; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .user-badge:hover { border-color: var(--accent3); color: var(--accent3); }
+    .user-badge svg { width: 12px; height: 12px; flex-shrink: 0; }
+    .user-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 5px var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 {
+      font-family: var(--font-display);
+      font-size: 2.4rem; line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .header h1 em { font-style: italic; color: var(--accent); }
+    .date-badge {
+      font-family: var(--font-mono);
+      font-size: 0.68rem; color: var(--muted);
+      margin-top: 0.4rem; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .live-clock {
+      font-family: var(--font-mono);
+      font-size: 0.75rem; color: var(--accent2);
+      margin-top: 0.25rem; letter-spacing: 0.1em;
+    }
+    .header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; }
+    .header-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+    .github-btn {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-mono); font-size: 0.7rem;
+      padding: 0.5rem 0.85rem; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .github-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .github-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .notif-btn {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-mono); font-size: 0.7rem;
+      padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .notif-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .notif-btn.active { border-color: var(--accent2); color: var(--accent2); }
+    .notif-btn svg { width: 13px; height: 13px; }
+
+    .conn-pill {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-family: var(--font-mono); font-size: 0.62rem;
+      color: var(--muted); letter-spacing: 0.05em;
+    }
+    .conn-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .conn-dot.syncing   { background: var(--accent2); animation: blink 0.9s infinite; }
+    .conn-dot.connected { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .conn-dot.error     { background: var(--accent3); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    .last-sync {
+      font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.6rem; margin-bottom: 1rem;
+      animation: up .35s ease both;
+    }
+    .card:nth-child(2){animation-delay:.06s}
+    .card:nth-child(3){animation-delay:.12s}
+    .card:nth-child(4){animation-delay:.18s}
+    .card:nth-child(5){animation-delay:.24s}
+    @keyframes up { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+
+    .card-label {
+      font-family: var(--font-mono); font-size: 0.62rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1.2rem;
+    }
+    .card-label-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.2rem;
+    }
+    .card-label-row .card-label { margin-bottom: 0; }
+
+    .prog-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.2rem; }
+    .big-pct {
+      font-family: var(--font-display); font-size: 3.8rem;
+      line-height: 1; color: var(--accent); letter-spacing: -0.04em;
+      transition: color 0.4s;
+    }
+    .big-pct.complete { color: var(--accent2); }
+    .sub-count { font-size: .78rem; color: var(--muted); margin-top: .2rem; }
+    .streak-box { text-align: right; }
+    .streak-num {
+      font-family: var(--font-display); font-size: 2rem;
+      color: var(--accent2); line-height: 1;
+    }
+    .streak-lbl { font-family: var(--font-mono); font-size: .6rem; color: var(--muted); }
+
+    .prog-track { width:100%; height:4px; background:var(--surface2); border-radius:99px; overflow:hidden; margin-bottom:1.4rem; }
+    .prog-fill  { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:99px; transition:width .6s cubic-bezier(.4,0,.2,1); width:0%; }
+
+    .habit-list { display:flex; flex-direction:column; gap:.45rem; }
+    .habit-item {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.85rem 1rem; background:var(--surface2);
+      border:1px solid var(--border); border-radius:10px;
+      cursor:pointer; transition:all .18s; user-select:none;
+    }
+    .habit-item:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+    .habit-item.done  { border-color: color-mix(in srgb, var(--accent) 25%, transparent); }
+    .habit-item.done .habit-name { text-decoration:line-through; color:var(--muted); }
+
+    .habit-left { display:flex; align-items:center; gap:.7rem; }
+    .chk {
+      width:20px; height:20px; border:1.5px solid var(--border);
+      border-radius:5px; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; transition:all .18s;
+    }
+    .habit-item.done .chk { background:var(--accent); border-color:var(--accent); }
+    .chk svg { display:none; width:11px; height:11px; }
+    .habit-item.done .chk svg { display:block; }
+    .habit-name { font-size:.88rem; font-weight:500; }
+
+    .habit-right { display:flex; align-items:center; gap:.5rem; }
+    .del-btn {
+      width: 24px; height: 24px; border-radius: 5px;
+      background: transparent; border: 1px solid transparent;
+      color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: all .18s; flex-shrink: 0;
+    }
+    .del-btn svg { width: 12px; height: 12px; }
+    .habit-item:hover .del-btn { opacity: 1; }
+    .del-btn:hover { background: rgba(245,90,140,.15); border-color: rgba(245,90,140,.4); color: var(--accent3); }
+
+    .tag {
+      font-family:var(--font-mono); font-size:.58rem; letter-spacing:.06em;
+      padding:.22rem .55rem; border-radius:99px; font-weight:500; flex-shrink:0;
+    }
+    .tag-health  { background:rgba(90,245,200,.1);  color:var(--accent2); }
+    .tag-skill   { background:rgba(200,245,90,.1);  color:var(--accent);  }
+    .tag-mindset { background:rgba(245,90,140,.1);  color:var(--accent3); }
+    .tag-other   { background:rgba(150,150,150,.1); color:var(--muted);   }
+
+    .add-form { display:flex; gap:.45rem; margin-top:1rem; }
+    .add-input {
+      flex:1; background:var(--surface2); border:1px solid var(--border);
+      border-radius:8px; color:var(--text); font-family:var(--font-body);
+      font-size:.84rem; padding:.58rem .85rem; outline:none; transition:border .2s;
+    }
+    .add-input:focus { border-color:var(--accent); }
+    .add-input::placeholder { color:var(--muted); }
+    .tag-sel {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:8px; color:var(--muted); font-family:var(--font-mono);
+      font-size:.68rem; padding:0 .7rem; cursor:pointer; outline:none;
+    }
+    .add-btn {
+      background:var(--accent); color:#0e0e10; border:none;
+      border-radius:8px; font-family:var(--font-mono); font-size:.72rem;
+      font-weight:500; padding:0 .95rem; cursor:pointer; transition:opacity .2s;
+      white-space:nowrap;
+    }
+    .add-btn:hover { opacity:.82; }
+
+    .chart-row { display:grid; grid-template-columns:1fr 130px; gap:1.4rem; align-items:center; }
+    canvas { display:block; }
+    .ring-wrap { display:flex; flex-direction:column; align-items:center; gap:.55rem; }
+    .ring-rel  { position:relative; width:120px; height:120px; }
+    .ring-val  {
+      font-family:var(--font-display); font-size:1.9rem; color:var(--accent);
+      line-height:1; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    }
+    .ring-lbl { font-family:var(--font-mono); font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+
+    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.65rem; }
+    .stat-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: .9rem; text-align: center;
+    }
+    .stat-val {
+      font-family: var(--font-display); font-size: 1.6rem;
+      color: var(--accent); line-height: 1; margin-bottom: .25rem;
+    }
+    .stat-val.teal { color: var(--accent2); }
+    .stat-val.pink { color: var(--accent3); }
+    .stat-label {
+      font-family: var(--font-mono); font-size: .58rem;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+      line-height: 1.4;
+    }
+
+    .export-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.65rem; }
+    .exp-btn {
+      display:flex; flex-direction:column; align-items:center; gap:.45rem;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:10px; padding:.9rem .6rem; cursor:pointer;
+      font-family:var(--font-mono); font-size:.62rem; color:var(--muted);
+      transition:all .2s; text-transform:uppercase; letter-spacing:.05em;
+    }
+    .exp-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .exp-btn svg { width:18px; height:18px; opacity:.65; }
+    .exp-btn:hover svg { opacity:1; }
+    .exp-row { display:flex; gap:.65rem; margin-top:.65rem; }
+    .exp-btn.wide {
+      flex:1; flex-direction:row; justify-content:center;
+      gap:.5rem; padding:.7rem; font-size:.68rem;
+    }
+    .exp-btn.wide svg { width:15px; height:15px; }
+    .exp-btn.danger { border-color:rgba(245,90,140,.25); color:var(--accent3); }
+    .exp-btn.danger:hover { border-color:var(--accent3); }
+    .exp-btn.history-btn { border-color:rgba(90,245,200,.25); color:var(--accent2); }
+    .exp-btn.history-btn:hover { border-color:var(--accent2); }
+
+    /* ── MODAL ── */
+    .overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.72);
+      backdrop-filter:blur(5px); display:flex; align-items:center;
+      justify-content:center; z-index:100;
+      opacity:0; pointer-events:none; transition:opacity .2s;
+    }
+    .overlay.open { opacity:1; pointer-events:all; }
+    .modal {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:16px; padding:1.8rem; width:min(430px,93vw);
+      transform:translateY(14px); transition:transform .25s;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .overlay.open .modal { transform:none; }
+    .modal h3 { font-family:var(--font-display); font-size:1.35rem; margin-bottom:.3rem; }
+    .modal-desc { font-size:.78rem; color:var(--muted); line-height:1.55; margin-bottom:1.2rem; }
+    .modal-desc a { color:var(--accent); text-decoration:none; }
+    .modal-desc code { font-family:var(--font-mono); font-size:.72rem; color:var(--accent); }
+    .modal-foot { display:flex; gap:.5rem; }
+    .modal-save {
+      flex:1; background:var(--accent); color:#0e0e10; border:none;
+      border-radius:8px; font-family:var(--font-mono); font-size:.78rem;
+      font-weight:500; padding:.68rem; cursor:pointer; transition:opacity .2s;
+    }
+    .modal-save:hover { opacity:.83; }
+    .modal-cancel {
+      padding:.68rem 1.1rem; background:transparent; border:1px solid var(--border);
+      border-radius:8px; color:var(--muted); font-family:var(--font-mono);
+      font-size:.78rem; cursor:pointer;
+    }
+
+    .history-list { display: flex; flex-direction: column; gap: .5rem; margin-top: .5rem; }
+    .history-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .6rem .85rem; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px;
+    }
+    .history-date { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
+    .history-bar-wrap { flex: 1; margin: 0 .85rem; height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .history-bar { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .4s; }
+    .history-pct { font-family: var(--font-mono); font-size: .72rem; color: var(--accent); min-width: 30px; text-align: right; }
+    .history-pct.zero { color: var(--muted); }
+
+    .reset-banner {
+      background: rgba(200,245,90,.06); border: 1px solid rgba(200,245,90,.2);
+      border-radius: 10px; padding: .7rem 1rem;
+      display: flex; align-items: center; gap: .6rem;
+      margin-bottom: 1rem; font-size: .78rem; color: var(--accent);
+      font-family: var(--font-mono);
+      animation: up .3s ease;
+    }
+    .reset-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 300; }
+
+    .toast {
+      position:fixed; bottom:1.8rem; right:1.4rem;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:10px; font-family:var(--font-mono); font-size:.73rem;
+      padding:.65rem 1rem; z-index:400;
+      transform:translateY(16px); opacity:0; transition:all .28s; pointer-events:none;
+    }
+    .toast.show { transform:none; opacity:1; }
+    .toast.ok  { border-color:var(--accent);  color:var(--accent);  }
+    .toast.err { border-color:var(--accent3); color:var(--accent3); }
+
+    @media(max-width:480px){
+      .chart-row { grid-template-columns:1fr; }
+      .export-grid { grid-template-columns:repeat(2,1fr); }
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+      .big-pct { font-size:2.8rem; }
+      .header-btns { flex-direction: column; align-items: flex-end; }
+      .login-box { padding: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas class="confetti-canvas" id="confettiCanvas"></canvas>
+
+<!-- ════════════════════════════════════════════════
+     LOGIN SCREEN
+     ════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><em>Habit</em> Tracker</div>
+    <div class="login-sub">Multi-user · GitHub Sync</div>
+
+    <!-- Step dots -->
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot0"></div>
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+    </div>
+
+    <!-- STEP 0: GitHub Config -->
+    <div class="step-panel active" id="step0">
+      <div class="step-title">Langkah 1 dari 3</div>
+      <div class="step-heading">Hubungkan GitHub</div>
+      <div class="step-desc">
+        GitHub dipakai sebagai database. Masukkan config sekali, dan data semua pengguna tersimpan di sana.<br><br>
+        Buat token di <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a> → Generate new token (classic) → centang <code>repo</code>.
+      </div>
+      <div id="step0Error" class="login-error"></div>
+      <label class="flabel">GitHub Username</label>
+      <input class="finput" id="cfgUser" placeholder="username-kamu" />
+      <label class="flabel">Repository Name</label>
+      <input class="finput" id="cfgRepo" placeholder="nama-repo" />
+      <label class="flabel">Personal Access Token</label>
+      <input class="finput" id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxx" />
+      <button class="btn-primary" id="btnStep0" onclick="doStep0()">Verifikasi Koneksi</button>
+    </div>
+
+    <!-- STEP 1: Login / Register -->
+    <div class="step-panel" id="step1">
+      <div class="step-title">Langkah 2 dari 3</div>
+      <div class="step-heading">Masuk atau Daftar</div>
+      <div class="step-desc">
+        Masukkan nama kamu. Jika belum terdaftar, kamu akan otomatis didaftarkan.
+      </div>
+      <div id="step1Error" class="login-error"></div>
+      <div id="step1Ok" class="login-ok"></div>
+      <label class="flabel">Nama Pengguna</label>
+      <input class="finput" id="loginName" placeholder="nama-kamu (tanpa spasi)" />
+      <button class="btn-primary" id="btnStep1" onclick="doStep1()">Lanjut</button>
+      <button class="btn-ghost" onclick="goBack(0)">← Ubah Config GitHub</button>
+    </div>
+
+    <!-- STEP 2: Confirm Register (only shown for new users) -->
+    <div class="step-panel" id="step2">
+      <div class="step-title">Langkah 3 dari 3</div>
+      <div class="step-heading" id="step2Heading">Konfirmasi Daftar</div>
+      <div class="step-desc" id="step2Desc"></div>
+      <div id="step2Error" class="login-error"></div>
+      <button class="btn-primary" id="btnStep2" onclick="doStep2()">Masuk</button>
+      <button class="btn-ghost" onclick="goBack(1)">← Ganti Nama</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     APP
+     ════════════════════════════════════════════════ -->
+<div class="wrapper" id="appWrapper" style="display:none;">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h1><em>Habit</em> Tracker</h1>
+      <div class="date-badge" id="dateLabel">—</div>
+      <div class="live-clock" id="liveClock">--:--:--</div>
+    </div>
+    <div class="header-right">
+      <div class="header-btns">
+        <button class="user-badge" id="userBadge" onclick="confirmLogout()" title="Klik untuk logout">
+          <div class="user-dot"></div>
+          <span id="userBadgeName">—</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+        </button>
+        <button class="notif-btn" id="notifBtn" onclick="toggleNotif()" title="Toggle reminder notifikasi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+        </button>
+        <button class="github-btn" onclick="openModal('github')">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.09.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.647.35-1.087.636-1.337-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.03-2.682-.103-.254-.447-1.27.098-2.646 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.547 1.376.203 2.394.1 2.646.64.699 1.026 1.591 1.026 2.682 0 3.841-2.337 4.687-4.565 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.744 0 .267.18.576.688.479C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub Config
+        </button>
+      </div>
+      <div class="conn-pill">
+        <div class="conn-dot" id="connDot"></div>
+        <span id="connText">Belum terhubung</span>
+      </div>
+      <div class="last-sync" id="lastSyncLabel"></div>
+    </div>
+  </div>
+
+  <!-- RESET BANNER -->
+  <div class="reset-banner" id="resetBanner" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    Hari baru dimulai! Check-in telah direset jam 04:00.
+  </div>
+
+  <!-- CARD 1: CHECK-IN -->
+  <div class="card">
+    <div class="card-label">Daily Check-In</div>
+    <div class="prog-header">
+      <div>
+        <div class="big-pct" id="pctText">0%</div>
+        <div class="sub-count" id="countText">0 dari 0 selesai</div>
+      </div>
+      <div class="streak-box">
+        <div class="streak-lbl">Streak</div>
+        <div class="streak-num" id="streakNum">0</div>
+        <div class="streak-lbl">hari</div>
+      </div>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+    <div class="habit-list" id="habitList"></div>
+    <div class="add-form">
+      <input class="add-input" id="newName" placeholder="Tambah habit baru…" />
+      <select class="tag-sel" id="newTag">
+        <option value="health">Health</option>
+        <option value="skill">Skill</option>
+        <option value="mindset">Mindset</option>
+        <option value="other">Other</option>
+      </select>
+      <button class="add-btn" onclick="addHabit()">+ Tambah</button>
+    </div>
+  </div>
+
+  <!-- CARD 2: CHARTS -->
+  <div class="card">
+    <div class="card-label">Progress Visual — 7 Hari Terakhir</div>
+    <div class="chart-row">
+      <canvas id="lineChart" height="160"></canvas>
+      <div class="ring-wrap">
+        <div class="ring-rel">
+          <canvas id="ringChart" width="120" height="120"></canvas>
+          <div class="ring-val" id="ringVal">0%</div>
+        </div>
+        <div class="ring-lbl">Hari Ini</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 3: STATISTIK -->
+  <div class="card">
+    <div class="card-label-row">
+      <div class="card-label">Statistik</div>
+      <button class="exp-btn history-btn" style="flex-direction:row;gap:.4rem;padding:.4rem .75rem;font-size:.62rem;" onclick="openModal('history')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+        Riwayat 30 Hari
+      </button>
+    </div>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-box">
+        <div class="stat-val" id="statTotalDays">0</div>
+        <div class="stat-label">Hari Aktif</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val teal" id="statAvgPct">0%</div>
+        <div class="stat-label">Rata-rata Harian</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val pink" id="statBestStreak">0</div>
+        <div class="stat-label">Streak Terbaik</div>
+      </div>
+    </div>
+    <div style="margin-top:.75rem; padding:.65rem .85rem; background:var(--surface2); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:.68rem; color:var(--muted);">
+      Habit terbanyak selesai: <span id="statBestHabit" style="color:var(--accent);">—</span>
+    </div>
+  </div>
+
+  <!-- CARD 4: EXPORT -->
+  <div class="card">
+    <div class="card-label">Export &amp; Simpan Data</div>
+    <div class="export-grid">
+      <button class="exp-btn" onclick="exportTXT()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+        Download TXT
+      </button>
+      <button class="exp-btn" onclick="exportJSON()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/></svg>
+        Download JSON
+      </button>
+      <button class="exp-btn" onclick="syncGitHub(false)">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/></svg>
+        Sync GitHub
+      </button>
+    </div>
+    <div class="exp-row">
+      <button class="exp-btn wide" onclick="loadFromGitHub()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        Load dari GitHub
+      </button>
+      <button class="exp-btn wide danger" onclick="confirmDeleteFile()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+        Hapus di GitHub
+      </button>
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<!-- MODAL GITHUB -->
+<div class="overlay" id="overlayGithub">
+  <div class="modal">
+    <h3>GitHub Config</h3>
+    <p class="modal-desc">
+      Update konfigurasi GitHub. Token butuh izin <code>repo</code>.<br>
+      Buat di <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a> → Generate new token (classic).
+    </p>
+    <label class="flabel">GitHub Username</label>
+    <input class="finput" id="ghUser" placeholder="username-kamu" />
+    <label class="flabel">Repository Name</label>
+    <input class="finput" id="ghRepo" placeholder="nama-repo" />
+    <label class="flabel">Personal Access Token</label>
+    <input class="finput" id="ghToken" type="password" placeholder="ghp_xxxxxxxxxxxx" />
+    <div class="modal-foot">
+      <button class="modal-cancel" onclick="closeModal('github')">Batal</button>
+      <button class="modal-save" onclick="saveConfig()">Simpan &amp; Reconnect</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORY -->
+<div class="overlay" id="overlayHistory">
+  <div class="modal">
+    <h3>Riwayat 30 Hari</h3>
+    <p class="modal-desc">Progres harian kamu selama 30 hari terakhir.</p>
+    <div class="history-list" id="historyList"></div>
+    <div class="modal-foot" style="margin-top:1.2rem;">
+      <button class="modal-cancel" style="flex:1;" onclick="closeModal('history')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+//  ⚙️  GITHUB PATHS
+// ════════════════════════════════════════════════
+const USERS_PATH   = 'data/users.json';       // daftar semua username
+const HABITS_DIR   = 'data/habits';           // habits-[nama].json disimpan di sini
+
+// ── Helper ─────────────────────────────────────
+function getToday() { return new Date().toISOString().slice(0, 10); }
+function slugify(n) { return n.trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-_]/g,''); }
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── State ──────────────────────────────────────
+let CURRENT_USER = null;
+
+let S = {
+  habits: [
+    { id:1, name:'Bangun Jam 5 Pagi',    tag:'health'  },
+    { id:2, name:'Belajar Coding 1 Jam', tag:'skill'   },
+    { id:3, name:'Olahraga Ringan',      tag:'health'  },
+    { id:4, name:'Membaca Buku',         tag:'mindset' },
+  ],
+  log: {}, streak: 0, lastResetDate: getToday(),
+};
+
+// ── GitHub config ─────────────────────────────
+let GH = (() => {
+  try { return JSON.parse(localStorage.getItem('ghCfg') || '{}'); } catch(e) { return {}; }
+})();
+
+const ghReady  = () => !!(GH.user && GH.repo && GH.token);
+const ghHdr    = () => ({
+  'Authorization': `token ${GH.token}`,
+  'Accept':        'application/vnd.github.v3+json',
+  'Content-Type':  'application/json',
+});
+const ghURL    = (path) => `https://api.github.com/repos/${GH.user}/${GH.repo}/contents/${path}`;
+const userPath = (name) => `${HABITS_DIR}/habits-${name}.json`;
+
+// ── Auto-sync debounce ─────────────────────────
+let syncTimer;
+const schedSync = () => {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncGitHub(true), 1800);
+};
+
+// ════════════════════════════════════════════════
+//  LOGIN FLOW
+// ════════════════════════════════════════════════
+let loginStep = 0;
+let pendingNewUser = false;
+let pendingUserName = '';
+
+function setStepDots(active) {
+  for (let i = 0; i < 3; i++) {
+    const d = document.getElementById('dot' + i);
+    d.classList.remove('active', 'done');
+    if (i < active) d.classList.add('done');
+    else if (i === active) d.classList.add('active');
+  }
+}
+
+function showStep(n) {
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('step' + i).classList.toggle('active', i === n);
+  }
+  setStepDots(n);
+  loginStep = n;
+}
+
+function goBack(n) { showStep(n); }
+
+function setBtnLoading(btnId, loading, text) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? `<span class="loading-spinner"></span>${text}`
+    : text;
+}
+
+function showStepError(step, msg) {
+  const el = document.getElementById('step' + step + 'Error');
+  el.textContent = msg; el.classList.add('show');
+}
+function clearStepMsg(step) {
+  const e = document.getElementById('step' + step + 'Error');
+  const o = document.getElementById('step' + step + 'Ok');
+  if (e) { e.textContent = ''; e.classList.remove('show'); }
+  if (o) { o.textContent = ''; o.classList.remove('show'); }
+}
+function showStepOk(step, msg) {
+  const el = document.getElementById('step' + step + 'Ok');
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+
+// Step 0: Verify GitHub connection
+async function doStep0() {
+  clearStepMsg(0);
+  const user  = document.getElementById('cfgUser').value.trim();
+  const repo  = document.getElementById('cfgRepo').value.trim();
+  const token = document.getElementById('cfgToken').value.trim();
+  if (!user || !repo || !token) { showStepError(0, 'Semua field wajib diisi.'); return; }
+
+  setBtnLoading('btnStep0', true, 'Memverifikasi…');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${user}/${repo}`, {
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+      }
+    });
+    if (res.status === 401) throw new Error('Token tidak valid atau tidak punya izin.');
+    if (res.status === 404) throw new Error('Repository tidak ditemukan. Pastikan nama repo benar dan token punya akses.');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    GH = { user, repo, token };
+    localStorage.setItem('ghCfg', JSON.stringify(GH));
+    setBtnLoading('btnStep0', false, 'Verifikasi Koneksi');
+    showStep(1);
+  } catch(e) {
+    setBtnLoading('btnStep0', false, 'Verifikasi Koneksi');
+    showStepError(0, '❌ ' + e.message);
+  }
+}
+
+// Step 1: Check username
+async function doStep1() {
+  clearStepMsg(1);
+  const raw = document.getElementById('loginName').value.trim();
+  if (!raw) { showStepError(1, 'Nama tidak boleh kosong.'); return; }
+  const name = slugify(raw);
+  if (!name) { showStepError(1, 'Nama hanya boleh huruf, angka, tanda hubung, dan underscore.'); return; }
+  if (name !== raw && raw !== '') {
+    // Nama sudah di-slugify, tampilkan hasilnya
+  }
+
+  setBtnLoading('btnStep1', true, 'Mengecek…');
+  try {
+    const users = await fetchUsers();
+    setBtnLoading('btnStep1', false, 'Lanjut');
+
+    if (users.includes(name)) {
+      // User sudah ada → langsung masuk
+      pendingUserName = name;
+      pendingNewUser = false;
+      document.getElementById('step2Heading').textContent = `Halo, ${name}! 👋`;
+      document.getElementById('step2Desc').textContent = `Akun kamu ditemukan. Klik Masuk untuk melanjutkan dan memuat data habit kamu.`;
+      showStep(2);
+    } else {
+      // User baru → tawarkan registrasi
+      pendingUserName = name;
+      pendingNewUser = true;
+      document.getElementById('step2Heading').textContent = `Daftar sebagai "${name}"`;
+      document.getElementById('step2Desc').textContent = `Nama "${name}" belum terdaftar. Kamu akan didaftarkan sebagai pengguna baru dan file habits-${name}.json akan dibuat di GitHub.`;
+      showStep(2);
+    }
+  } catch(e) {
+    setBtnLoading('btnStep1', false, 'Lanjut');
+    showStepError(1, '❌ ' + e.message);
+  }
+}
+
+// Step 2: Login or register
+async function doStep2() {
+  clearStepMsg(2);
+  setBtnLoading('btnStep2', true, pendingNewUser ? 'Mendaftarkan…' : 'Memuat data…');
+  try {
+    if (pendingNewUser) {
+      await registerUser(pendingUserName);
+    }
+    await loginUser(pendingUserName);
+  } catch(e) {
+    setBtnLoading('btnStep2', false, 'Masuk');
+    showStepError(2, '❌ ' + e.message);
+  }
+}
+
+// Fetch users.json
+async function fetchUsers() {
+  const res = await fetch(ghURL(USERS_PATH), { headers: ghHdr() });
+  if (res.status === 404) return []; // Belum ada users.json
+  if (!res.ok) throw new Error(`Gagal ambil users.json (HTTP ${res.status})`);
+  const j = await res.json();
+  const raw = j.content.replace(/\n/g, '');
+  const decoded = decodeURIComponent(escape(atob(raw)));
+  return JSON.parse(decoded);
+}
+
+// Register: tambah nama ke users.json
+async function registerUser(name) {
+  let users = [];
+  let sha = null;
+  try {
+    const res = await fetch(ghURL(USERS_PATH), { headers: ghHdr() });
+    if (res.ok) {
+      const j = await res.json();
+      sha = j.sha;
+      const raw = j.content.replace(/\n/g, '');
+      users = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    }
+  } catch(e) {}
+
+  if (users.includes(name)) throw new Error('Nama sudah terdaftar.');
+  users.push(name);
+
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(users, null, 2))));
+  const body = { message: `register user: ${name}`, content };
+  if (sha) body.sha = sha;
+
+  const res = await fetch(ghURL(USERS_PATH), { method: 'PUT', headers: ghHdr(), body: JSON.stringify(body) });
+  if (!res.ok) {
+    const e = await res.json(); throw new Error(e.message);
+  }
+
+  // Buat file habits awal untuk user baru
+  const initState = {
+    habits: [
+      { id:1, name:'Bangun Jam 5 Pagi',    tag:'health'  },
+      { id:2, name:'Belajar Coding 1 Jam', tag:'skill'   },
+      { id:3, name:'Olahraga Ringan',      tag:'health'  },
+      { id:4, name:'Membaca Buku',         tag:'mindset' },
+    ],
+    log: {}, streak: 0, lastResetDate: getToday(),
+  };
+  const initContent = btoa(unescape(encodeURIComponent(JSON.stringify(initState, null, 2))));
+  const initRes = await fetch(ghURL(userPath(name)), {
+    method: 'PUT', headers: ghHdr(),
+    body: JSON.stringify({ message: `init habits for ${name}`, content: initContent }),
+  });
+  if (!initRes.ok) {
+    const e = await initRes.json(); throw new Error('Gagal buat file habits: ' + e.message);
+  }
+}
+
+// Login: load data user
+async function loginUser(name) {
+  const res = await fetch(ghURL(userPath(name)), { headers: ghHdr() });
+  if (!res.ok) throw new Error(`File habits-${name}.json tidak ditemukan (HTTP ${res.status})`);
+  const j = await res.json();
+  const raw = j.content.replace(/\n/g, '');
+  const decoded = decodeURIComponent(escape(atob(raw)));
+  S = JSON.parse(decoded);
+
+  CURRENT_USER = name;
+  localStorage.setItem('currentUser', name);
+  localStorage.setItem('lastSyncTime', Date.now());
+
+  enterApp(name);
+}
+
+function enterApp(name) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appWrapper').style.display  = '';
+  document.getElementById('userBadgeName').textContent  = name;
+  document.getElementById('ghUser').value  = GH.user;
+  document.getElementById('ghRepo').value  = GH.repo;
+  document.getElementById('ghToken').value = GH.token;
+
+  document.getElementById('dateLabel').textContent =
+    new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  document.getElementById('newName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addHabit();
+  });
+  ['overlayGithub','overlayHistory'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => {
+      if (e.target.id === id) closeModal(id === 'overlayGithub' ? 'github' : 'history');
+    });
+  });
+
+  if (!localStorage.getItem('lastResetDate')) {
+    localStorage.setItem('lastResetDate', getToday());
+  }
+
+  computeStreak(); render(); renderCharts(); renderStats();
+  startClock();
+  updateNotifBtn();
+  updateLastSyncLabel();
+  setStatus('connected');
+  showToast(`Selamat datang, ${name}! ✓`, 'ok');
+  setInterval(checkNotifTime, 60000);
+}
+
+function confirmLogout() {
+  if (!confirm(`Logout dari akun "${CURRENT_USER}"?`)) return;
+  CURRENT_USER = null;
+  localStorage.removeItem('currentUser');
+  document.getElementById('appWrapper').style.display  = 'none';
+  document.getElementById('loginScreen').style.display = '';
+  // reset login form
+  showStep(0);
+  clearStepMsg(0); clearStepMsg(1); clearStepMsg(2);
+  document.getElementById('loginName').value = '';
+  // pre-fill github fields if already configured
+  if (GH.user) {
+    document.getElementById('cfgUser').value  = GH.user;
+    document.getElementById('cfgRepo').value  = GH.repo;
+    document.getElementById('cfgToken').value = GH.token;
+    // Skip step 0, go to step 1
+    showStep(1);
+  }
+}
+
+// ════════════════════════════════════════════════
+//  STATUS UI
+// ════════════════════════════════════════════════
+function setStatus(s) {
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  dot.className = 'conn-dot';
+  const m = {
+    idle:      ['',          'Belum terhubung'],
+    syncing:   ['syncing',   'Menyinkron…'],
+    connected: ['connected', `${GH.user}/${GH.repo}`],
+    error:     ['error',     'Koneksi gagal'],
+    offline:   ['error',     'Tidak ada internet'],
+  };
+  const [cls, label] = m[s] || m.idle;
+  if (cls) dot.classList.add(cls);
+  txt.textContent = label;
+}
+
+function updateLastSyncLabel() {
+  const ts = localStorage.getItem('lastSyncTime');
+  const el = document.getElementById('lastSyncLabel');
+  if (!el) return;
+  if (!ts) { el.textContent = ''; return; }
+  const d = new Date(parseInt(ts));
+  el.textContent = 'Synced ' + d.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+}
+
+// ════════════════════════════════════════════════
+//  RESET JAM 04:00
+// ════════════════════════════════════════════════
+function checkDailyReset() {
+  if (!CURRENT_USER) return;
+  const now = new Date();
+  const today = getToday();
+  const storedReset = localStorage.getItem('lastResetDate') || '';
+  if (now.getHours() >= 4 && storedReset !== today) {
+    const previousDate = storedReset;
+    localStorage.setItem('lastResetDate', today);
+    S.lastResetDate = today;
+    if (previousDate !== today) {
+      delete S.log[today];
+      computeStreak(); saveLocal(); render(); renderCharts(); renderStats();
+      const banner = document.getElementById('resetBanner');
+      banner.style.display = 'flex';
+      setTimeout(() => { banner.style.display = 'none'; }, 6000);
+      showToast('Hari baru! Check-in direset ✓', 'ok');
+      schedSync();
+    }
+  }
+}
+
+// ════════════════════════════════════════════════
+//  CLOCK
+// ════════════════════════════════════════════════
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('liveClock').textContent =
+      now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    checkDailyReset();
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ════════════════════════════════════════════════
+//  NOTIFIKASI
+// ════════════════════════════════════════════════
+let notifEnabled = localStorage.getItem('notifEnabled') === '1';
+function updateNotifBtn() {
+  const btn = document.getElementById('notifBtn');
+  btn.classList.toggle('active', notifEnabled);
+  btn.title = notifEnabled ? 'Notifikasi aktif (klik untuk matikan)' : 'Aktifkan reminder notifikasi';
+}
+async function toggleNotif() {
+  if (!notifEnabled) {
+    if (!('Notification' in window)) { showToast('Browser tidak mendukung notifikasi', 'err'); return; }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { showToast('Izin notifikasi ditolak', 'err'); return; }
+    notifEnabled = true;
+    localStorage.setItem('notifEnabled', '1');
+    showToast('Reminder aktif! Kamu akan diingatkan setiap jam 08:00 🔔', 'ok');
+  } else {
+    notifEnabled = false;
+    localStorage.setItem('notifEnabled', '0');
+    showToast('Reminder dimatikan', '');
+  }
+  updateNotifBtn();
+}
+function checkNotifTime() {
+  if (!notifEnabled) return;
+  const now = new Date();
+  const key = `notifSent_${getToday()}`;
+  if (now.getHours() === 8 && now.getMinutes() === 0 && !sessionStorage.getItem(key)) {
+    sessionStorage.setItem(key, '1');
+    const done = todayDone().length, total = S.habits.length;
+    if (done < total) {
+      new Notification('⚡ Habit Tracker', {
+        body: `Kamu baru selesaikan ${done}/${total} habit hari ini. Yuk, semangat!`,
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">✅</text></svg>'
+      });
+    }
+  }
+}
+
+// ════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════
+function todayDone() { return S.log[getToday()] || []; }
+
+function render() {
+  const done = todayDone();
+  document.getElementById('habitList').innerHTML = S.habits.map(h => {
+    const ok = done.includes(h.id);
+    return `<div class="habit-item${ok?' done':''}" onclick="toggle(${h.id})">
+      <div class="habit-left">
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#0e0e10" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1.5,6 4.5,9 10.5,3"/>
+          </svg>
+        </div>
+        <span class="habit-name">${escHtml(h.name)}</span>
+      </div>
+      <div class="habit-right">
+        <span class="tag tag-${h.tag}">${h.tag}</span>
+        <button class="del-btn" onclick="deleteHabit(event,${h.id})" title="Hapus habit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+  updateUI();
+}
+
+function updateUI() {
+  const total = S.habits.length, done = todayDone().length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  const pctEl = document.getElementById('pctText');
+  pctEl.textContent = pct+'%';
+  pctEl.classList.toggle('complete', pct === 100 && total > 0);
+  document.getElementById('progFill').style.width  = pct+'%';
+  document.getElementById('countText').textContent = `${done} dari ${total} selesai`;
+  document.getElementById('ringVal').textContent   = pct+'%';
+  document.getElementById('streakNum').textContent = S.streak;
+  drawRing(pct);
+  if (pct === 100 && total > 0) {
+    const key = 'celebrated_' + getToday();
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1');
+      launchConfetti();
+      showToast('🎉 Semua habit selesai hari ini!', 'ok');
+    }
+  }
+}
+
+// ════════════════════════════════════════════════
+//  STATISTIK
+// ════════════════════════════════════════════════
+function renderStats() {
+  const logs = S.log || {};
+  const activeDays = Object.keys(logs).filter(k => (logs[k]||[]).length > 0).length;
+  const logKeys = Object.keys(logs);
+  let totalPct = 0;
+  logKeys.forEach(k => {
+    const done = (logs[k]||[]).length;
+    totalPct += S.habits.length ? Math.round(done/S.habits.length*100) : 0;
+  });
+  const avg = logKeys.length ? Math.round(totalPct/logKeys.length) : 0;
+  const bestStreak = computeBestStreak();
+  const habitCount = {};
+  S.habits.forEach(h => { habitCount[h.id] = 0; });
+  logKeys.forEach(k => { (logs[k]||[]).forEach(id => { if (habitCount[id] !== undefined) habitCount[id]++; }); });
+  let bestHabit = '—', bestCount = 0;
+  S.habits.forEach(h => {
+    if (habitCount[h.id] > bestCount) { bestCount = habitCount[h.id]; bestHabit = h.name + ` (${bestCount}×)`; }
+  });
+  document.getElementById('statTotalDays').textContent  = activeDays;
+  document.getElementById('statAvgPct').textContent     = avg + '%';
+  document.getElementById('statBestStreak').textContent = bestStreak;
+  document.getElementById('statBestHabit').textContent  = bestHabit;
+}
+
+function computeBestStreak() {
+  if (!S.log) return 0;
+  const sorted = Object.keys(S.log).filter(k => (S.log[k]||[]).length > 0).sort();
+  let best = 0, cur = 0, prev = null;
+  sorted.forEach(d => {
+    if (prev) {
+      const diff = (new Date(d) - new Date(prev)) / 86400000;
+      cur = diff === 1 ? cur + 1 : 1;
+    } else cur = 1;
+    best = Math.max(best, cur); prev = d;
+  });
+  return best;
+}
+
+// ════════════════════════════════════════════════
+//  STREAK
+// ════════════════════════════════════════════════
+function computeStreak() {
+  const today = getToday();
+  const logs = S.log || {};
+  let streak = 0, cur = new Date(today);
+  while (true) {
+    const key = cur.toISOString().slice(0,10);
+    if ((logs[key]||[]).length > 0) { streak++; cur.setDate(cur.getDate()-1); }
+    else break;
+  }
+  S.streak = streak;
+}
+
+// ════════════════════════════════════════════════
+//  ACTIONS
+// ════════════════════════════════════════════════
+function toggle(id) {
+  const today = getToday();
+  if (!S.log[today]) S.log[today] = [];
+  const idx = S.log[today].indexOf(id);
+  if (idx >= 0) S.log[today].splice(idx, 1);
+  else S.log[today].push(id);
+  computeStreak(); saveLocal(); render(); renderCharts(); renderStats();
+  schedSync();
+}
+
+function addHabit() {
+  const n = document.getElementById('newName').value.trim();
+  if (!n) return;
+  const tag = document.getElementById('newTag').value;
+  const id = Date.now();
+  S.habits.push({ id, name: n, tag });
+  document.getElementById('newName').value = '';
+  computeStreak(); saveLocal(); render(); renderCharts(); renderStats();
+  showToast('Habit ditambahkan ✓', 'ok');
+  schedSync();
+}
+
+function deleteHabit(e, id) {
+  e.stopPropagation();
+  S.habits = S.habits.filter(h => h.id !== id);
+  Object.keys(S.log).forEach(d => {
+    S.log[d] = (S.log[d]||[]).filter(x => x !== id);
+  });
+  computeStreak(); saveLocal(); render(); renderCharts(); renderStats();
+  showToast('Habit dihapus', '');
+  schedSync();
+}
+
+// ════════════════════════════════════════════════
+//  LOCAL STORAGE
+// ════════════════════════════════════════════════
+function saveLocal() {
+  if (CURRENT_USER) {
+    localStorage.setItem('habitState_' + CURRENT_USER, JSON.stringify(S));
+  }
+}
+
+// ════════════════════════════════════════════════
+//  GITHUB SYNC (per-user file)
+// ════════════════════════════════════════════════
+async function syncGitHub(silent=false) {
+  if (!ghReady() || !CURRENT_USER) { showToast('Belum login atau GitHub belum dikonfigurasi', 'err'); return; }
+  setStatus('syncing');
+  if (!silent) showToast('Menyimpan ke GitHub…','');
+  try {
+    const path = userPath(CURRENT_USER);
+    let sha = null;
+    const chk = await fetch(ghURL(path), { headers: ghHdr() });
+    if (chk.ok) { const j = await chk.json(); sha = j.sha; }
+
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(S, null, 2))));
+    const body = { message: `habit sync ${getToday()} [${CURRENT_USER}]`, content };
+    if (sha) body.sha = sha;
+
+    const res = await fetch(ghURL(path), { method:'PUT', headers:ghHdr(), body:JSON.stringify(body) });
+    if (res.ok) {
+      setStatus('connected');
+      localStorage.setItem('lastSyncTime', Date.now());
+      updateLastSyncLabel();
+      if (!silent) showToast('Tersimpan di GitHub ✓', 'ok');
+    } else {
+      const e = await res.json(); throw new Error(e.message);
+    }
+  } catch(e) { setStatus('error'); showToast('Sync gagal: ' + e.message, 'err'); }
+}
+
+async function loadFromGitHub() {
+  if (!ghReady() || !CURRENT_USER) return;
+  setStatus('syncing');
+  try {
+    const path = userPath(CURRENT_USER);
+    const res = await fetch(ghURL(path), { headers: ghHdr() });
+    if (res.status === 404) {
+      setStatus('connected');
+      showToast('File belum ada, akan dibuat saat sync pertama.', 'ok');
+      return;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j   = await res.json();
+    const raw = j.content.replace(/\n/g, '');
+    S = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    saveLocal(); computeStreak(); render(); renderCharts(); renderStats();
+    setStatus('connected');
+    localStorage.setItem('lastSyncTime', Date.now());
+    updateLastSyncLabel();
+    showToast('Data dimuat dari GitHub ✓', 'ok');
+  } catch(e) {
+    setStatus(navigator.onLine ? 'error' : 'offline');
+    showToast('Load gagal: ' + e.message, 'err');
+  }
+}
+
+async function confirmDeleteFile() {
+  if (!ghReady() || !CURRENT_USER) return;
+  if (!confirm(`Hapus file habits-${CURRENT_USER}.json dari GitHub?`)) return;
+  showToast('Menghapus…','');
+  try {
+    const path = userPath(CURRENT_USER);
+    const chk = await fetch(ghURL(path), { headers: ghHdr() });
+    if (!chk.ok) throw new Error('File tidak ditemukan');
+    const j = await chk.json();
+    const res = await fetch(ghURL(path), {
+      method:'DELETE', headers:ghHdr(),
+      body: JSON.stringify({ message: `hapus habits ${getToday()} [${CURRENT_USER}]`, sha: j.sha }),
+    });
+    if (res.ok) { setStatus('idle'); showToast('File dihapus ✓', 'ok'); }
+    else { const e = await res.json(); throw new Error(e.message); }
+  } catch(e) { showToast('Error: ' + e.message, 'err'); }
+}
+
+// ════════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════════
+function openModal(type) {
+  if (type === 'history') {
+    openHistoryModal();
+    document.getElementById('overlayHistory').classList.add('open');
+  } else {
+    document.getElementById('overlayGithub').classList.add('open');
+  }
+}
+function closeModal(type) {
+  if (type === 'history') document.getElementById('overlayHistory').classList.remove('open');
+  else document.getElementById('overlayGithub').classList.remove('open');
+}
+
+function saveConfig() {
+  GH = {
+    user:  document.getElementById('ghUser').value.trim(),
+    repo:  document.getElementById('ghRepo').value.trim(),
+    token: document.getElementById('ghToken').value.trim(),
+  };
+  localStorage.setItem('ghCfg', JSON.stringify(GH));
+  closeModal('github');
+  showToast('Config tersimpan ✓', 'ok');
+  setStatus('connected');
+}
+
+// ════════════════════════════════════════════════
+//  HISTORY MODAL
+// ════════════════════════════════════════════════
+function openHistoryModal() {
+  const list = document.getElementById('historyList');
+  const logs = S.log || {};
+  const days = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  list.innerHTML = days.map(d => {
+    const done = (logs[d]||[]).length;
+    const total = S.habits.length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    return `<div class="history-row">
+      <div class="history-date">${d}</div>
+      <div class="history-bar-wrap"><div class="history-bar" style="width:${pct}%"></div></div>
+      <div class="history-pct${pct===0?' zero':''}">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+//  CHARTS
+// ════════════════════════════════════════════════
+function renderCharts() {
+  const data = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    const done = (S.log[key]||[]).length;
+    const total = S.habits.length;
+    data.push({
+      label: d.toLocaleDateString('id-ID',{weekday:'short'}),
+      pct: total ? Math.round(done/total*100) : 0,
+    });
+  }
+  drawLine(data);
+  const today = getToday();
+  const done = (S.log[today]||[]).length;
+  const total = S.habits.length;
+  drawRing(total ? Math.round(done/total*100) : 0);
+}
+
+function drawLine(data) {
+  const cv = document.getElementById('lineChart');
+  if (!cv) return;
+  cv.width = cv.parentElement.clientWidth || 300;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,160);
+  const PT=20, PB=30, PL=10, PR=10;
+  const cW = cv.width-PL-PR, cH = 160-PT-PB;
+  const yLines = [0,25,50,75,100];
+  yLines.forEach(v => {
+    const y = PT+cH-(v/100)*cH;
+    ctx.beginPath(); ctx.moveTo(PL,y); ctx.lineTo(PL+cW,y);
+    ctx.strokeStyle='rgba(46,46,56,0.8)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='#6b6b7a'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right';
+    ctx.fillText(v+'%', PL-2, y+3);
+  });
+  data.forEach((d,i) => {
+    const x = PL+(i/(data.length-1))*cW;
+    ctx.fillStyle='#6b6b7a'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='center';
+    ctx.fillText(d.label, x, 157);
+  });
+  const g = ctx.createLinearGradient(0,PT,0,PT+cH);
+  g.addColorStop(0,'rgba(200,245,90,.18)'); g.addColorStop(1,'rgba(200,245,90,0)');
+  ctx.beginPath();
+  data.forEach((d,i)=>{ const x=PL+(i/(data.length-1))*cW,y=PT+cH-(d.pct/100)*cH; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.lineTo(PL+cW,PT+cH); ctx.lineTo(PL,PT+cH); ctx.closePath();
+  ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath();
+  data.forEach((d,i)=>{ const x=PL+(i/(data.length-1))*cW,y=PT+cH-(d.pct/100)*cH; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.strokeStyle='#c8f55a'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+  data.forEach((d,i) => {
+    const x=PL+(i/(data.length-1))*cW, y=PT+cH-(d.pct/100)*cH;
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fillStyle='#c8f55a'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fillStyle='#0e0e10'; ctx.fill();
+  });
+}
+
+function drawRing(pct) {
+  const cv = document.getElementById('ringChart'), ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,120,120);
+  ctx.beginPath(); ctx.arc(60,60,50,0,Math.PI*2); ctx.strokeStyle='#2e2e38'; ctx.lineWidth=10; ctx.stroke();
+  if (pct > 0) {
+    const g = ctx.createLinearGradient(10,60,110,60);
+    g.addColorStop(0,'#c8f55a'); g.addColorStop(1,'#5af5c8');
+    ctx.beginPath(); ctx.arc(60,60,50,-Math.PI/2,-Math.PI/2+(pct/100)*Math.PI*2);
+    ctx.strokeStyle=g; ctx.lineWidth=10; ctx.lineCap='round'; ctx.stroke();
+  }
+}
+
+window.addEventListener('resize', () => { if (CURRENT_USER) renderCharts(); });
+
+// ════════════════════════════════════════════════
+//  CONFETTI
+// ════════════════════════════════════════════════
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const colors = ['#c8f55a','#5af5c8','#f55a8c','#f5c85a','#5a8cf5'];
+  const particles = Array.from({length: 120}, () => ({
+    x: Math.random() * canvas.width,
+    y: -10 - Math.random() * 80,
+    r: 4 + Math.random() * 5,
+    d: 10 + Math.random() * 30,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    tilt: Math.random() * 10 - 10,
+    tiltAngle: 0, tiltSpeed: 0.1 + Math.random() * 0.1,
+  }));
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.tiltAngle += p.tiltSpeed;
+      p.y += (Math.cos(frame / 20 + p.d) + 3);
+      p.x += Math.sin(frame / 30) * 1.5;
+      p.tilt = Math.sin(p.tiltAngle) * 12;
+      ctx.beginPath(); ctx.lineWidth = p.r; ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+      ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+      ctx.stroke();
+    });
+    frame++;
+    if (frame < 180) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  draw();
+}
+
+// ════════════════════════════════════════════════
+//  EXPORT
+// ════════════════════════════════════════════════
+function exportTXT() {
+  const today = getToday();
+  const done = todayDone(), pct = S.habits.length ? Math.round(done.length/S.habits.length*100) : 0;
+  let out = `=== Habit Tracker Report ===\nUser: ${CURRENT_USER}\n${today}\n\n`;
+  S.habits.forEach(h => { out += `${done.includes(h.id)?'✔':'○'} ${h.name} [${h.tag}]\n`; });
+  out += `\nProgress: ${done.length}/${S.habits.length} (${pct}%)\nStreak: ${S.streak} hari\n`;
+  dlBlob(out, `habits-${CURRENT_USER}-${today}.txt`, 'text/plain');
+}
+function exportJSON() {
+  dlBlob(JSON.stringify(S,null,2), `habits-${CURRENT_USER}-${getToday()}.json`, 'application/json');
+}
+function dlBlob(c,n,t) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([c],{type:t})); a.download = n; a.click();
+  showToast('File didownload ✓', 'ok');
+}
+
+// ════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════
+let _tt;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(_tt); _tt = setTimeout(() => { el.className = 'toast'; }, 2800);
+}
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Enter key di step 0 & 1
+  document.getElementById('cfgToken').addEventListener('keydown', e => { if (e.key === 'Enter') doStep0(); });
+  document.getElementById('loginName').addEventListener('keydown', e => { if (e.key === 'Enter') doStep1(); });
+
+  // Jika GitHub config sudah ada, skip ke step 1
+  if (ghReady()) {
+    document.getElementById('cfgUser').value  = GH.user;
+    document.getElementById('cfgRepo').value  = GH.repo;
+    document.getElementById('cfgToken').value = GH.token;
+    showStep(1);
+
+    // Jika user sudah login sebelumnya, auto-load
+    const saved = localStorage.getItem('currentUser');
+    if (saved) {
+      CURRENT_USER = saved;
+      const localState = localStorage.getItem('habitState_' + saved);
+      if (localState) {
+        try { S = JSON.parse(localState); } catch(e) {}
+      }
+      enterApp(saved);
+      // Sync dari GitHub di background
+      loadFromGitHub();
+    }
+  }
+});
+</script>
+</body>
+</html>
