@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THP Habits Tracker - Sync dengan GitHub</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1e293b, #2d3a4b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.25rem;
+        }
+        .sub {
+            color: #475569;
+            margin-bottom: 2rem;
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+        }
+        /* card */
+        .card {
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+        }
+        .grid-2col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 1.5rem;
+        }
+        /* habits table */
+        .habits-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .habits-table th, .habits-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .habit-name {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 20px;
+            height: 8px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: #3b82f6;
+            width: 0%;
+            height: 100%;
+            border-radius: 20px;
+        }
+        .checklist {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .day-check {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #f1f5f9;
+            cursor: pointer;
+            transition: 0.1s;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .day-check.checked {
+            background: #22c55e;
+            color: white;
+        }
+        .day-check:hover {
+            transform: scale(1.05);
+            background: #cbd5e1;
+        }
+        button {
+            background: #1e293b;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-right: 8px;
+            margin-top: 8px;
+        }
+        button:hover {
+            background: #0f172a;
+            transform: translateY(-1px);
+        }
+        .btn-outline {
+            background: white;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+        }
+        .btn-outline:hover {
+            background: #f8fafc;
+        }
+        .github-setup {
+            background: #fef9c3;
+            border-left: 5px solid #eab308;
+            padding: 12px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        input, select {
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e293b;
+        }
+        canvas {
+            max-height: 280px;
+            width: 100%;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: #e6f0ff;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+        }
+        @media (max-width: 700px) {
+            .grid-2col { grid-template-columns: 1fr; }
+            .day-check { width: 30px; height: 30px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="flex-between">
+        <div>
+            <h1>✅ THP Habits Tracker</h1>
+            <div class="sub">Sync dengan GitHub · Analitik lengkap</div>
+        </div>
+        <div class="badge">v2.0 · realtime</div>
+    </div>
+
+    <!-- GitHub Token Setup -->
+    <div class="github-setup" id="githubSetupArea">
+        <div style="font-weight: bold;">🔐 GitHub Personal Access Token (PAT)</div>
+        <div style="font-size: 0.85rem; margin: 8px 0;">Butuh akses ke Gist (create/edit). Simpan token di localStorage.</div>
+        <input type="password" id="githubToken" placeholder="Masukkan GitHub PAT (gist scope)" style="width: 280px;">
+        <input type="text" id="gistId" placeholder="Gist ID (kosongi jika baru)" style="width: 220px;">
+        <button id="saveTokenBtn">💾 Simpan Token & Gist ID</button>
+        <button id="createNewGistBtn" class="btn-outline">✨ Buat Gist Baru</button>
+        <button id="loadFromGithubBtn" class="btn-outline">📥 Load dari GitHub</button>
+        <div id="githubStatus" style="font-size:12px; margin-top:8px;"></div>
+    </div>
+
+    <!-- Daftar Habits & Checklist -->
+    <div class="card">
+        <div class="flex-between">
+            <h3>📋 Daftar Kebiasaan</h3>
+            <div>
+                <button id="addHabitBtn">+ Tambah Habit</button>
+                <button id="saveToGithubBtn" style="background:#2c3e66;">💾 Save ke GitHub (Sync)</button>
+                <button id="exportCSVBtn" class="btn-outline">📎 Export CSV</button>
+                <button id="exportJSONBtn" class="btn-outline">📄 Export JSON</button>
+            </div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="habits-table" id="habitsTable">
+                <thead>
+                    <tr><th>Habit</th><th>Progress %</th><th>7 Hari Terakhir</th><th>Aksi</th></tr>
+                </thead>
+                <tbody id="habitsTbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Statistik & Charts -->
+    <div class="grid-2col">
+        <div class="card">
+            <h3>📈 Trend 7 Hari (Grafik Garis)</h3>
+            <canvas id="lineChart" width="400" height="200"></canvas>
+            <p id="overallPercent" class="stats-number" style="font-size:1.2rem; margin-top:10px;"></p>
+        </div>
+        <div class="card">
+            <h3>🥧 Perbandingan Total (Done vs Missed)</h3>
+            <canvas id="pieChart" width="200" height="200"></canvas>
+            <div id="totalStatsText" style="margin-top: 10px; text-align:center;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- DATA MODEL ----------
+    let habits = [];         // [{ id, name }]
+    // dataLog: { "YYYY-MM-DD": { habitId: boolean } }
+    let dataLog = {};
+
+    let currentGistId = localStorage.getItem('thp_gist_id') || '';
+    let githubToken = localStorage.getItem('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') || '';
+
+    // DOM elements
+    const habitsTbody = document.getElementById('habitsTbody');
+    let lineChart, pieChart;
+
+    // Helper: tanggal hari ini & 7 hari terakhir
+    function getLast7Days() {
+        let days = [];
+        for (let i = 6; i >= 0; i--) {
+            let d = new Date();
+            d.setDate(d.getDate() - i);
+            days.push(d.toISOString().slice(0,10));
+        }
+        return days;
+    }
+
+    // Hitung persentase habit tertentu berdasarkan dataLog 7 hari terakhir
+    function getHabitProgress(habitId, daysArr = null) {
+        if (!daysArr) daysArr = getLast7Days();
+        let total = 0, done = 0;
+        for (let day of daysArr) {
+            if (dataLog[day] && dataLog[day][habitId] === true) done++;
+            total++;
+        }
+        return total === 0 ? 0 : (done / total) * 100;
+    }
+
+    // Hitung persentase harian (rata-rata habit yg tercentang per hari)
+    function getDailyCompletionPercent(day) {
+        if (!dataLog[day] || habits.length === 0) return 0;
+        let checked = 0;
+        for (let h of habits) {
+            if (dataLog[day][h.id] === true) checked++;
+        }
+        return (checked / habits.length) * 100;
+    }
+
+    // Render tabel checklist
+    function renderHabitsTable() {
+        const days = getLast7Days();
+        let html = '';
+        for (let habit of habits) {
+            let progress = getHabitProgress(habit.id, days);
+            html += `<tr>
+                <td class="habit-name"><input type="text" value="${escapeHtml(habit.name)}" data-id="${habit.id}" class="habit-name-input" style="border:none; background:#f3f4f6; border-radius:8px; padding:6px;"></td>
+                <td style="width:120px"><div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div><span style="font-size:12px;">${progress.toFixed(0)}%</span></td>
+                <td><div class="checklist" data-habit="${habit.id}">` + 
+                    days.map(day => {
+                        let isChecked = dataLog[day]?.[habit.id] === true;
+                        return `<div class="day-check ${isChecked ? 'checked' : ''}" data-day="${day}" data-habit="${habit.id}">${day.slice(5)}</div>`;
+                    }).join('') + 
+                `</div></td>
+                <td><button class="delete-habit-btn" data-id="${habit.id}" style="background:#ef4444; padding:4px 12px;">🗑 Hapus</button></td>
+            </tr>`;
+        }
+        habitsTbody.innerHTML = html || '<tr><td colspan="4">Belum ada habit. Klik "+ Tambah Habit"</td></tr>';
+        
+        // attach event listeners untuk checklist
+        document.querySelectorAll('.day-check').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                let day = el.dataset.day;
+                let habitId = parseInt(el.dataset.habit);
+                if (!dataLog[day]) dataLog[day] = {};
+                let current = dataLog[day][habitId] === true;
+                dataLog[day][habitId] = !current;
+                renderHabitsTable();   // re-render
+                updateChartsAndStats();
+            });
+        });
+        
+        // edit nama habit secara langsung
+        document.querySelectorAll('.habit-name-input').forEach(inp => {
+            inp.addEventListener('change', (e) => {
+                let hid = parseInt(inp.dataset.id);
+                let newName = inp.value.trim();
+                if (newName) {
+                    let h = habits.find(hh => hh.id === hid);
+                    if (h) h.name = newName;
+                    renderHabitsTable();
+                    updateChartsAndStats();
+                }
+            });
+        });
+        
+        document.querySelectorAll('.delete-habit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                let hid = parseInt(btn.dataset.id);
+                habits = habits.filter(h => h.id !== hid);
+                // hapus dari dataLog
+                for (let day in dataLog) {
+                    delete dataLog[day][hid];
+                }
+                renderHabitsTable();
+                updateChartsAndStats();
+            });
+        });
+    }
+
+    function updateChartsAndStats() {
+        const days = getLast7Days();
+        // Garis: persentase harian
+        let dailyPercent = days.map(day => getDailyCompletionPercent(day));
+        if (lineChart) lineChart.destroy();
+        const ctxLine = document.getElementById('lineChart').getContext('2d');
+        lineChart = new Chart(ctxLine, {
+            type: 'line',
+            data: { labels: days.map(d => d.slice(5)), datasets: [{ label: 'Rata-rata Keberhasilan Harian (%)', data: dailyPercent, borderColor: '#3b82f6', tension: 0.2, fill: true, backgroundColor: 'rgba(59,130,246,0.1)' }] },
+            options: { responsive: true, maintainAspectRatio: true }
+        });
+        
+        // Pie chart: total checked vs missed (seluruh data)
+        let totalChecked = 0, totalMissed = 0;
+        for (let day in dataLog) {
+            for (let h of habits) {
+                if (dataLog[day][h.id] === true) totalChecked++;
+                else totalMissed++;
+            }
+        }
+        if (pieChart) pieChart.destroy();
+        const ctxPie = document.getElementById('pieChart').getContext('2d');
+        pieChart = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: { labels: ['Selesai ✅', 'Terlewat ❌'], datasets: [{ data: [totalChecked, totalMissed], backgroundColor: ['#22c55e', '#ef4444'] }] }
+        });
+        document.getElementById('totalStatsText').innerHTML = `✅ ${totalChecked} kebiasaan selesai &nbsp;&nbsp; ❌ ${totalMissed} terlewat`;
+        
+        let overallAvg = dailyPercent.reduce((a,b)=>a+b,0)/(dailyPercent.length||1);
+        document.getElementById('overallPercent').innerHTML = `📊 Rata-rata 7 hari: ${overallAvg.toFixed(1)}%`;
+    }
+    
+    // Tambah habit baru
+    function addHabit() {
+        let newName = prompt("Nama habit baru:", "Latihan pagi");
+        if (newName) {
+            let newId = Date.now();
+            habits.push({ id: newId, name: newName });
+            renderHabitsTable();
+            updateChartsAndStats();
+        }
+    }
+    
+    // Export / Import data (ke GitHub menggunakan Gist)
+    function getFullDataForSave() {
+        return { habits, dataLog, version: '1.0', lastUpdated: new Date().toISOString() };
+    }
+    
+    async function saveToGithub() {
+        if (!githubToken) { alert("Masukkan GitHub PAT terlebih dahulu!"); return false; }
+        const data = getFullDataForSave();
+        const content = JSON.stringify(data, null, 2);
+        const gistId = currentGistId;
+        const url = gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
+        const method = gistId ? 'PATCH' : 'POST';
+        const body = {
+            description: 'THP Habits Tracker Data',
+            public: false,
+            files: { 'habits_data.json': { content: content } }
+        };
+        try {
+            let res = await fetch(url, {
+                method, headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error(await res.text());
+            let result = await res.json();
+            if (!gistId) {
+                currentGistId = result.id;
+                localStorage.setItem('thp_gist_id', currentGistId);
+                document.getElementById('gistId').value = currentGistId;
+            }
+            document.getElementById('githubStatus').innerHTML = '✅ Berhasil tersimpan ke GitHub!';
+            setTimeout(()=> document.getElementById('githubStatus').innerHTML='', 3000);
+            return true;
+        } catch(e) { alert('Gagal simpan: '+e.message); return false; }
+    }
+    
+    async function loadFromGithub() {
+        if (!githubToken || !currentGistId) { alert("Token dan Gist ID diperlukan."); return false; }
+        try {
+            let res = await fetch(`https://api.github.com/gists/${currentGistId}`, { headers: { 'Authorization': `token ${githubToken}` } });
+            if (!res.ok) throw new Error();
+            let gist = await res.json();
+            let fileContent = gist.files['habits_data.json']?.content;
+            if (!fileContent) throw new Error("File habits_data.json tidak ditemukan");
+            let saved = JSON.parse(fileContent);
+            habits = saved.habits || [];
+            dataLog = saved.dataLog || {};
+            renderHabitsTable();
+            updateChartsAndStats();
+            document.getElementById('githubStatus').innerHTML = '📥 Load sukses dari GitHub!';
+            setTimeout(()=> document.getElementById('githubStatus').innerHTML='', 3000);
+        } catch(e) { alert('Gagal load: '+e.message); }
+    }
+    
+    async function createNewGist() {
+        if (!githubToken) { alert("Token diperlukan"); return; }
+        currentGistId = '';
+        localStorage.removeItem('thp_gist_id');
+        document.getElementById('gistId').value = '';
+        let success = await saveToGithub();
+        if(success) alert("Gist baru dibuat!");
+    }
+    
+    function exportCSV() {
+        let days = getLast7Days();
+        let rows = [["Habit", ...days.map(d=>d.slice(5)), "Total %"]];
+        for(let h of habits){
+            let row = [h.name];
+            let doneCount=0;
+            for(let day of days){
+                let val = dataLog[day]?.[h.id] === true ? 1 : 0;
+                row.push(val);
+                if(val===1) doneCount++;
+            }
+            row.push(((doneCount/days.length)*100).toFixed(1)+"%");
+            rows.push(row);
+        }
+        let csv = rows.map(r => r.join(",")).join("\n");
+        let blob = new Blob([csv], {type:"text/csv"});
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `habits_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+    }
+    
+    function exportJSON() {
+        let data = getFullDataForSave();
+        let blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `habits_backup.json`;
+        a.click();
+    }
+    
+    function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;});}
+    
+    // initialization UI token
+    function loadTokenFromStorage() {
+        let t = localStorage.getItem('thp_github_token');
+        let g = localStorage.getItem('thp_gist_id');
+        if(t) { githubToken = t; document.getElementById('githubToken').value = t; }
+        if(g) { currentGistId = g; document.getElementById('gistId').value = g; }
+    }
+    document.getElementById('saveTokenBtn').addEventListener('click', ()=>{
+        let newToken = document.getElementById('githubToken').value.trim();
+        let newGistId = document.getElementById('gistId').value.trim();
+        if(newToken) { localStorage.setItem('thp_github_token', newToken); githubToken = newToken; }
+        if(newGistId) { localStorage.setItem('thp_gist_id', newGistId); currentGistId = newGistId; }
+        else if(!newGistId && currentGistId) localStorage.removeItem('thp_gist_id');
+        document.getElementById('githubStatus').innerHTML = 'Token tersimpan.';
+    });
+    document.getElementById('createNewGistBtn').addEventListener('click', createNewGist);
+    document.getElementById('loadFromGithubBtn').addEventListener('click', loadFromGithub);
+    document.getElementById('saveToGithubBtn').addEventListener('click', saveToGithub);
+    document.getElementById('addHabitBtn').addEventListener('click', addHabit);
+    document.getElementById('exportCSVBtn').addEventListener('click', exportCSV);
+    document.getElementById('exportJSONBtn').addEventListener('click', exportJSON);
+    
+    // inisialisasi default sample jika kosong
+    if(!localStorage.getItem('thp_sample_loaded')){
+        if(habits.length===0){
+            habits = [{ id: 1, name: 'Meditasi' }, { id: 2, name: 'Olahraga' }, { id: 3, name: 'Baca Buku' }];
+            let days = getLast7Days();
+            for(let day of days){
+                dataLog[day] = {};
+                for(let h of habits){
+                    dataLog[day][h.id] = Math.random() > 0.3;
+                }
+            }
+            localStorage.setItem('thp_sample_loaded','true');
+        }
+    } else {
+        if(habits.length===0) habits = [{ id: 1, name: 'Meditasi' }, { id: 2, name: 'Olahraga' }];
+    }
+    
+    loadTokenFromStorage();
+    renderHabitsTable();
+    updateChartsAndStats();
+</script>
+</body>
+</html>
