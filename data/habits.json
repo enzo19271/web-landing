@@ -29,6 +29,11 @@
       "id": 1778759496194,
       "name": "Sholat Subuh",
       "tag": "other"
+    },
+    {
+      "id": 1778759501184,
+      "name": "Sholat Zuhur",
+      "tag": "other"
     }
   ],
   "log": {
