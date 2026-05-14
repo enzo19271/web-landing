@@ -1,0 +1,32 @@
+{
+  "habits": [
+    {
+      "id": 1,
+      "name": "Bangun Jam 5 Pagi",
+      "tag": "health"
+    },
+    {
+      "id": 2,
+      "name": "Belajar Coding 1 Jam",
+      "tag": "skill"
+    },
+    {
+      "id": 3,
+      "name": "Olahraga Ringan",
+      "tag": "health"
+    },
+    {
+      "id": 4,
+      "name": "Membaca Buku",
+      "tag": "mindset"
+    }
+  ],
+  "log": {
+    "2026-05-14": [
+      1,
+      2,
+      3
+    ]
+  },
+  "streak": 0
+}
