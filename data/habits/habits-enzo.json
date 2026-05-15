@@ -39,6 +39,11 @@
       "id": 1778813718618,
       "name": "Sholat Maghrib",
       "tag": "mindset"
+    },
+    {
+      "id": 1778813722175,
+      "name": "Sholat Isya",
+      "tag": "mindset"
     }
   ],
   "log": {
@@ -48,7 +53,8 @@
     ],
     "2026-05-15": [
       1,
-      2
+      2,
+      1778813708224
     ]
   },
   "streak": 2,
